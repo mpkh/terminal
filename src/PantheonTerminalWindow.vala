@@ -101,8 +101,8 @@ namespace PantheonTerminal {
             new_tab (location);
         }
 
-        public void add_tab_with_command (string command) {
-            new_tab ("", command);
+        public void add_tab_with_command (string command, string? location = null) {
+            new_tab (location == null ? "" : location, command);
         }
 
         public void add_tab_with_working_directory (string location) {
@@ -566,6 +566,7 @@ namespace PantheonTerminal {
              * Reassigning the directory variable a new value
              * leads to free'd memory being read.
              */
+
             string location;
             if (directory == "") {
                 location = PantheonTerminalApp.working_directory ?? Environment.get_current_dir ();
@@ -589,8 +590,7 @@ namespace PantheonTerminal {
                     if (program != null) {
                         /* If a program was running, do not close the tab so that output of program
                          * remains visible */
-                        t.active_shell (location);
-                        /* Allow closing tab with "exit" */
+                       /* Allow closing tab with "exit" */
                         program = null;
                     } else {
                         t.tab.close ();
@@ -624,17 +624,7 @@ namespace PantheonTerminal {
             notebook.insert_tab (tab, -1);
             notebook.current = tab;
             t.grab_focus ();
-
-            if (program == null) {
-                /* Set up the virtual terminal */
-                if (location == "") {
-                    t.active_shell ();
-                } else {
-                    t.active_shell (location);
-                }
-            } else {
-                t.run_program (program);
-            }
+            t.active_shell (location, program);
         }
 
         private Granite.Widgets.Tab create_tab (string label, GLib.Icon? icon, TerminalWidget term) {

@@ -254,7 +254,12 @@ namespace PantheonTerminal {
             }
         }
 
-        public void active_shell (string dir = GLib.Environment.get_current_dir ()) {
+        public void active_shell (string _dir = "", string? program = null) {
+            string dir = _dir;
+
+            if (_dir == "") {
+                dir = GLib.Environment.get_current_dir ();
+            }
             string shell = settings.shell;
             string?[] envv = null;
 
@@ -276,25 +281,19 @@ namespace PantheonTerminal {
             /* Putting this in an Idle loop helps avoid corruption of the prompt on startup with multiple tabs */
             Idle.add_full (GLib.Priority.LOW, () => {
                 try {
+
                     this.spawn_sync (Vte.PtyFlags.DEFAULT, dir, { shell },
-                                            envv, SpawnFlags.SEARCH_PATH, null, out this.child_pid, null);
+                                     envv, SpawnFlags.SEARCH_PATH, null, out this.child_pid, null);
+
+                    if (program != null) {
+                        feed_child (program + "\n", (long)(program.length + 1));
+                    }
                 } catch (Error e) {
                     warning (e.message);
                 }
+
                 return false;
             });
-        }
-
-        public void run_program (string program_string) {
-            try {
-                string[]? program_with_args = null;
-                Shell.parse_argv (program_string, out program_with_args);
-
-                this.spawn_sync (Vte.PtyFlags.DEFAULT, null, program_with_args,
-                                        null, SpawnFlags.SEARCH_PATH, null, out this.child_pid, null);
-            } catch (Error e) {
-                warning (e.message);
-            }
         }
 
         public bool try_get_foreground_pid (out int pid) {

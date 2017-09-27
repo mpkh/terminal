@@ -68,10 +68,30 @@ namespace PantheonTerminal {
             return window;
         }
 
-        public override int command_line (ApplicationCommandLine command_line) {
+        public new int run (string[] args) {
+            parse_args (args);
+            return base.run (args);
+        }
+
+        private void parse_args (string[] args) {
             // keep the application running until we are done with this commandline
+            var context = new OptionContext ("File");
+            context.add_main_entries (entries, "pantheon-terminal");
+            context.add_group (Gtk.get_option_group (true));
+
+            try {
+                unowned string[] tmp = args;
+                context.parse (ref tmp);
+            } catch (Error e) {
+                stdout.printf ("pantheon-terminal: ERROR: " + e.message + "\n");
+            }
+        }
+
+        public override int command_line (ApplicationCommandLine command_line) {
             hold ();
-            int res = _command_line (command_line);
+            string[] args = command_line.get_arguments ();
+            parse_args (args);
+            int res = _command_line ();
             release ();
             return res;
         }
@@ -121,38 +141,23 @@ namespace PantheonTerminal {
             return true;
         }
 
-        private int _command_line (ApplicationCommandLine command_line) {
-            var context = new OptionContext ("File");
-            context.add_main_entries (entries, "pantheon-terminal");
-            context.add_group (Gtk.get_option_group (true));
-
-            string[] args = command_line.get_arguments ();
-
-            try {
-                unowned string[] tmp = args;
-                context.parse (ref tmp);
-            } catch (Error e) {
-                stdout.printf ("pantheon-terminal: ERROR: " + e.message + "\n");
-                return 0;
-            }
-
+        private int _command_line () {
             if (command_e != null) {
                 run_commands (command_e);
-
-            } else if (working_directory != null) {
+                command_e = null;
+            } else {
+                if (working_directory != null) {
                 start_terminal_with_working_directory (working_directory);
 
-            } else if (print_version) {
-                stdout.printf ("Pantheon Terminal %s\n", Build.VERSION);
-                stdout.printf ("Copyright 2011-2015 Pantheon Terminal Developers.\n");
+                } else if (print_version) {
+                    stdout.printf ("Pantheon Terminal %s\n", Build.VERSION);
+                    stdout.printf ("Copyright 2011-2015 Pantheon Terminal Developers.\n");
 
-            } else {
-                new_window ();
+                } else {
+                    new_window ();
+                }
             }
 
-            // Do not save the value until the next instance of
-            // Pantheon Terminal is started
-            command_e = null;
 
             return 0;
         }
@@ -166,7 +171,7 @@ namespace PantheonTerminal {
             }
 
             foreach (string command in commands) {
-                window.add_tab_with_command (command);
+                window.add_tab_with_command (command, working_directory);
             }
         }
 
